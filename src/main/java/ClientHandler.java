@@ -1,5 +1,6 @@
 import java.io.*;
 import java.net.Socket;
+import java.nio.ByteBuffer;
 
 class ClientHandler implements Runnable {
     private Socket clientSocket;
@@ -37,8 +38,27 @@ class ClientHandler implements Runnable {
 //                System.out.println(resp);
                 output.write(resp.getBytes());
 
+            } else if (HttpRequest[1].startsWith("/files/")) {
+                String filename = HttpRequest[1].replace("/files/", "");
+                File file = new File(Main.directory + filename);
+
+                if (!file.exists())
+                    output.write(Main.prepare404Headers().getBytes());
+                else {
+                    FileInputStream fileInputStream = new FileInputStream(file);
+                    byte[] fileContent = fileInputStream.readAllBytes();
+                    byte[] headers = Main.prepareFileHeaders((int) file.length()).getBytes();
+
+                    ByteBuffer byteBuffer = ByteBuffer.allocate(fileContent.length + headers.length);
+                    byteBuffer.put(headers);
+                    byteBuffer.put(fileContent);
+
+                    byte[] response = byteBuffer.array();
+
+                    output.write(response);
+                }
             } else {
-                output.write("HTTP/1.1 404 Not Found\r\n\r\n".getBytes());
+                output.write(Main.prepare404Headers().getBytes());
             }
 
             clientSocket.close();
