@@ -3,10 +3,13 @@ import java.net.Socket;
 import java.nio.ByteBuffer;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.zip.GZIPOutputStream;
 
 class ClientHandler implements Runnable {
-    private Socket clientSocket;
+    private final Socket clientSocket;
     private BufferedReader reader;
+
+    private boolean gZipCompress = false;
 
     public ClientHandler(Socket socket) {
         this.clientSocket = socket;
@@ -24,8 +27,10 @@ class ClientHandler implements Runnable {
 
             Headers resH = new Headers();
 
-            if (headers.containsKey("accept-encoding") && headers.get("accept-encoding").contains("gzip"))
+            if (headers.containsKey("accept-encoding") && headers.get("accept-encoding").contains("gzip")) {
+                gZipCompress = true;
                 resH.appendBody("Content-Encoding: gzip");
+            }
 
             String body = getBody();
 
@@ -35,10 +40,25 @@ class ClientHandler implements Runnable {
                 output.write(resH.getHeaders().getBytes());
             } else if (HttpRequest[1].startsWith("/echo/")) {
                 String content = HttpRequest[1].replace("/echo/", "");
-                String response = Main.prepareHeaders(resH, content.length()) + content;
-                output.write(response.getBytes());
+
+                if (gZipCompress) {
+                    ByteArrayOutputStream byteArrayOutputStream =
+                            new ByteArrayOutputStream();
+                    try (GZIPOutputStream gzipOutputStream =
+                                 new GZIPOutputStream(byteArrayOutputStream)) {
+                        gzipOutputStream.write(content.getBytes());
+                    }
+                    byte[] gzipData = byteArrayOutputStream.toByteArray();
+
+                    output.write(Main.prepareHeaders(resH, gzipData.length).getBytes());
+                    output.write(gzipData);
+                } else {
+                    String response = Main.prepareHeaders(resH, content.length()) + content;
+                    output.write(response.getBytes());
+                }
+
             } else if (HttpRequest[1].equals("/user-agent")) {
-                String ua = (String) headers.get("user-agent");
+                String ua = headers.get("user-agent");
 
                 String resp = Main.prepareHeaders(resH, ua.length()) + ua;
                 output.write(resp.getBytes());
@@ -88,7 +108,7 @@ class ClientHandler implements Runnable {
         }
     }
 
-    public Map getHeaders() throws IOException {
+    public Map<String,String> getHeaders() throws IOException {
         Map<String, String> map = new HashMap<>();
 
         while (reader.ready()) {

@@ -21,6 +21,6 @@ public class Headers {
     }
 
     public String getHeaders() {
-        return statusLine + "\r\n" + body.toString() + "\r\n";
+        return statusLine + "\r\n" + body + "\r\n";
     }
 }
