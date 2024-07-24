@@ -31,13 +31,6 @@ public class Main {
         }
     }
 
-    public static String prepareHeaders(int contentLength) {
-        Headers headers = new Headers();
-        headers.appendBody("Content-Type: text/plain");
-        headers.appendBody("Content-Length: " + contentLength);
-        return headers.getHeaders();
-    }
-
     public static String prepareHeaders(Headers resH, int contentLength) {
         resH.appendBody("Content-Type: text/plain");
         resH.appendBody("Content-Length: " + contentLength);
