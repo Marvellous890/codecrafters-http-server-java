@@ -20,11 +20,11 @@ class ClientHandler implements Runnable {
             String line = reader.readLine();
             String[] HttpRequest = line.split(" ", 0);
 
-            Map headers = getHeaders();
+            Map<String, String> headers = getHeaders();
 
             Headers resH = new Headers();
 
-            if (headers.containsKey("accept-encoding") && headers.get("accept-encoding").equals("gzip"))
+            if (headers.containsKey("accept-encoding") && headers.get("accept-encoding").contains("gzip"))
                 resH.appendBody("Content-Encoding: gzip");
 
             String body = getBody();
