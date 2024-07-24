@@ -32,14 +32,15 @@ public class Main {
     }
 
     public static String prepareHeaders(int contentLength) {
-        return "HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: " + contentLength + "\r\n\r\n";
+        Headers headers = new Headers();
+        headers.appendBody("Content-Type: text/plain");
+        headers.appendBody("Content-Length: " + contentLength);
+        return headers.getHeaders();
     }
 
-    public static String prepareFileHeaders(int contentLength) {
-        return "HTTP/1.1 200 OK\r\nContent-Type: application/octet-stream\r\nContent-Length: " + contentLength + "\r\n\r\n";
-    }
-
-    public static String prepare404Headers() {
-        return "HTTP/1.1 404 Not Found\r\n\r\n";
+    public static String prepareHeaders(Headers resH, int contentLength) {
+        resH.appendBody("Content-Type: text/plain");
+        resH.appendBody("Content-Length: " + contentLength);
+        return resH.getHeaders();
     }
 }

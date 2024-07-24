@@ -22,21 +22,25 @@ class ClientHandler implements Runnable {
 
             Map headers = getHeaders();
 
+            Headers resH = new Headers();
+
+            if (headers.containsKey("accept-encoding") && headers.get("accept-encoding").equals("gzip"))
+                resH.appendBody("Content-Encoding: gzip");
+
             String body = getBody();
 
             OutputStream output = clientSocket.getOutputStream();
 
             if (HttpRequest[1].equals("/")) {
-                output.write("HTTP/1.1 200 OK\r\n\r\n".getBytes());
+                output.write(resH.getHeaders().getBytes());
             } else if (HttpRequest[1].startsWith("/echo/")) {
                 String content = HttpRequest[1].replace("/echo/", "");
-                String response = "HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: " + content.length() + "\r\n\r\n" + content;
+                String response = Main.prepareHeaders(resH, content.length()) + content;
                 output.write(response.getBytes());
             } else if (HttpRequest[1].equals("/user-agent")) {
                 String ua = (String) headers.get("user-agent");
 
-                String resp = Main.prepareHeaders(ua.length()) + ua;
-//                System.out.println(resp);
+                String resp = Main.prepareHeaders(resH, ua.length()) + ua;
                 output.write(resp.getBytes());
 
             } else if (HttpRequest[1].startsWith("/files/")) {
@@ -48,15 +52,20 @@ class ClientHandler implements Runnable {
                     fileWriter.write(body);
                     fileWriter.close();
 
-                    output.write("HTTP/1.1 201 Created\r\n\r\n".getBytes());
+                    resH.setStatusLine("HTTP/1.1 201 Created");
+
+                    output.write(resH.getHeaders().getBytes());
                 } else if (!file.exists())
-                    output.write(Main.prepare404Headers().getBytes());
+                    output.write(resH.setStatusLine("HTTP/1.1 404 Not Found").getHeaders().getBytes());
                 else {
                     FileInputStream fileInputStream = new FileInputStream(file);
                     byte[] fileContent = fileInputStream.readAllBytes();
                     fileInputStream.close();
 
-                    byte[] _headers = Main.prepareFileHeaders((int) file.length()).getBytes();
+                    resH.appendBody("Content-Type: application/octet-stream");
+                    resH.appendBody("Content-Length: " + file.length());
+
+                    byte[] _headers = resH.getHeaders().getBytes();
 
                     ByteBuffer byteBuffer = ByteBuffer.allocate(fileContent.length + _headers.length);
                     byteBuffer.put(_headers);
@@ -67,7 +76,7 @@ class ClientHandler implements Runnable {
                     output.write(response);
                 }
             } else {
-                output.write(Main.prepare404Headers().getBytes());
+                output.write(resH.setStatusLine("HTTP/1.1 404 Not Found").getHeaders().getBytes());
             }
         } catch (IOException e) {
             e.printStackTrace();
